@@ -1,0 +1,208 @@
+---
+title: "DATA 608 - Module 1"
+author: "Jim Mundy"
+output:
+  html_document:
+    css: ./lab.css
+    highlight: pygments
+    theme: cerulean
+    toc: true
+    toc_float: true
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```{r echo=TRUE, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(dlookr)
+```
+
+**Principles of Data Visualization and Introduction to ggplot2**
+
+I have provided you with data about the 5,000 fastest growing companies in the US, as compiled by Inc. magazine. lets read this in:
+
+```{r}
+
+inc <- read.csv("https://raw.githubusercontent.com/charleyferrari/CUNY_DATA_608/master/module1/Data/inc5000_data.csv", header= TRUE)
+
+inc <-as_tibble(inc)
+
+```
+
+And lets preview this data:
+
+```{r}
+
+head(inc)
+
+```
+```{r}
+
+summary(inc)
+
+```
+
+Think a bit on what these summaries mean. Use the space below to add some more relevant non-visual exploratory information you think helps you understand this data:
+
+
+## My Approach
+
+We have looked at a summary and the top of the data, but not the bottom.  I'll perform a tail to review the bottom of the data and then I will use some dlookr functions to develop a better understanding of the data.
+
+```{r}
+tail(inc)
+```
+
+```
+The summary and and tail functions revealed some cleaning is required in the Name variable.
+```
+
+##dlookr Package
+```
+dlookr diagnose function allows you to diagnose varables on a data frame.
+
+The package provides a variety of functions that make it easier to understand your data and its challenges. 
+```
+
+```{r}
+diagnose(inc)
+
+```
+
+```
+Clearly shows variable types and reveals some missing data for Employees
+```
+```{r}
+diagnose_numeric(inc)
+```
+
+```{r}
+diagnose_category(inc)
+```
+
+
+```
+diagnose_numeric provides some descriptive stats and outlier information on the numeric variables. diagnose_category returns diagnostic information for the non-numeric variables. 
+
+```
+
+
+
+
+```{r echo=TRUE, warning=FALSE, message=FALSE}
+
+describe(inc)
+
+```
+
+```{r echo=TRUE, warning=FALSE, message=FALSE}
+
+normality(inc)
+
+```
+
+
+
+```
+describe() and normality provide some additional information on skewness and level of normaility. 
+``
+
+## Question 1
+
+Create a graph that shows the distribution of companies in the dataset by State (ie how many are in each state). There are a lot of States, so consider which axis you should use. This visualization is ultimately going to be consumed on a 'portrait' oriented screen (ie taller than wide), which should further guide your layout choices.
+
+```{r echo=TRUE, warning=FALSE, message=FALSE}
+library(hrbrthemes)
+library(ggthemes)
+library(tidyverse)
+library(kableExtra)
+
+
+state = inc %>%
+  select(State, Name) %>% 
+  group_by(State) %>% 
+  count(State) %>% 
+  arrange(desc(n))
+  
+  p <- ggplot(state, aes(x=reorder(State, n), y=n, fill=n)) +
+  geom_col() +
+  geom_text(aes(label=scales::comma(n)), hjust=0, nudge_y=2000) +
+  scale_y_comma(limits=c(0,800)) +
+  coord_flip() +
+  labs(x="", y="Companies per state (n)",
+       title="Fastest Growing Companies",
+       subtitle="Number of high growth companies by state.",
+       caption="Source: Inc. Magazine (2016)") + 
+  theme_ipsum(grid="X") + theme(legend.title = element_blank()) + theme(axis.text.y =element_text(size = 7))
+   
+
+p
+
+
+```
+
+
+
+
+
+## Quesiton 2
+
+Lets dig in on the state with the 3rd most companies in the data set. Imagine you work for the state and are interested in how many people are employed by companies in different industries. Create a plot that shows the average and/or median employment by industry for companies in this state (only use cases with full data, use R's `complete.cases()` function.) In addition to this, your graph should show how variable the ranges are, and you should deal with outliers.
+
+```{r echo=TRUE, warning=FALSE, message=FALSE}
+inc2 <- inc %>% 
+  filter(State == "NY") %>% 
+  filter(complete.cases(.)) %>% 
+  group_by(Industry) %>% 
+  summarise(Mean = mean(Employees),
+            Median = median(Employees)) %>% 
+  gather(statType, Amount, Mean, Median)
+  
+  kable(inc2, format = "markdown")
+  
+  (p <- 
+  ggplot(inc2, aes(x=reorder(Industry, Amount), y = Amount)) +
+  geom_bar(stat = 'identity', aes(fill = statType), position = 'dodge') +
+  coord_flip() + 
+  labs(y="Employees (n)", x="",
+       title="New York State Employment",
+       subtitle="Employment segmented by Industry",
+       caption="Source: Inc. Magazine (2016)") + 
+  theme_ipsum_rc(grid="X") + theme(axis.text.y =element_text(size = 8))+theme(legend.title = element_blank()))
+
+ 
+```
+
+## Question 3
+
+Now imagine you work for an investor and want to see which industries generate the most revenue per employee. Create a chart that makes this information clear. Once again, the distribution per industry should be shown.
+
+```{r echo=TRUE, warning=FALSE, message=FALSE}
+
+inc3 <- inc %>% 
+  filter(State == "NY") %>% 
+  filter(complete.cases(.)) %>% 
+  mutate(RevPercentage = (Revenue / Employees)/1000) %>% 
+  group_by(Industry) %>% 
+  summarise(Mean = mean(RevPercentage))
+  
+
+  
+kable(inc3, format = "markdown")
+
+(p <- 
+  ggplot(inc3, aes(x=reorder(Industry, Mean), y = Mean)) +
+  geom_bar(stat = 'identity', aes(fill = 'Blue')) +
+  coord_flip() + 
+  labs(y="Revenue Per Employee", x="",
+       title="NY Revenue Per Employee by Industry",
+       subtitle="$000",
+       caption="Source: Inc. Magazine (2016)") + 
+  theme_ipsum_rc(grid="X") + theme(axis.text.y =element_text(size = 8)) + theme(legend.position = "none"))
+
+```
+
