@@ -1,0 +1,173 @@
+---
+title: "DATA 608 - Module"
+author: "Jim Mundy"
+output:
+  html_document:
+    css: ./lab.css
+    highlight: pygments
+    theme: cerulean
+    toc: true
+    toc_float: true
+  pdf_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```{r echo=TRUE, warning=FALSE, message=FALSE}
+library(plotly)
+library(tidyverse)
+library(maps)
+library(ggthemes)
+library(ggmap)
+library(mapdata)
+
+```
+
+## Assignment
+
+For module 2 we'll be looking at techniques for dealing with big data. In particular binning strategies and the datashader library (which possibly proves we'll never need to bin large data for visualization ever again.). To demonstrate these concepts we'll be looking at the PLUTO dataset put out by New York City's Department of City Planning. PLUTO contains data about every tax lot in New York City. PLUTO data can be downloaded from here. Unzip them to the same directory as this notebook, and you should be able to read them in using this (or very similar) code. Also take note of the data dictionary, it'll come in handy for this assignment.
+
+## Import NYC PLUTO dataset
+
+```{r echo=TRUE, warning=FALSE, message=FALSE, cache=TRUE}
+filenames <- list.files(path="C:/Users/mutue/OneDrive/Documents/DATA607/", pattern="*.csv")
+print(filenames)
+fullpath=file.path("/OneDrive/Documents/DATA607",filenames)
+print(fullpath)
+ny <- do.call("rbind",lapply(filenames,FUN=function(files){ read.csv(files)}))
+
+ny <- as_tibble(ny)
+ny <- ny %>% 
+  select(YearBuilt, NumFloors, ZipCode, BBL, Address, AssessTot, AssessLand)
+```
+
+
+## Binning and Aggregation
+
+Binning is a common strategy for visualizing large datasets. Binning is inherent to a few types of visualizations, such as histograms and 2D histograms (also check out their close relatives: 2D density plots and the more general form: heatmaps.
+While these visualization types explicitly include binning, any type of visualization used with aggregated data can be looked at in the same way. For example, lets say we wanted to look at building construction over time. This would be best viewed as a line graph, but we can still think of our results as being binned by year:
+
+```{r echo=TRUE, warning=FALSE, message=FALSE}
+
+nyc_blt <- ny %>%
+  filter(YearBuilt >= 1850, YearBuilt < 2018) %>%
+  select(YearBuilt, BBL, NumFloors) %>%
+  group_by(YearBuilt) %>% 
+  summarize(count =sum(!is.na(BBL)))
+
+ylab <- c(0,20,40,60,80)
+
+p <- ggplot(nyc_blt, aes(x=YearBuilt, y=count)) +
+  geom_line() +
+  expand_limits(x = c(1850, 2017), y = c(0, 90000)) + 
+  scale_y_continuous(labels = paste0(ylab, "K"),
+                     breaks = 10^3 * ylab
+  )
+
+p <- ggplotly(p)
+  
+p
+
+```
+
+Something looks off... You're going to have to deal with this imperfect data to answer this first question.
+
+
+
+###Clean the Data
+
+The YearBuilt data is only accurate within the decade (not the year) this is the cause of the repeating rise and fall to zero in the graph above. By creating decade bins this problem can be corrected. 
+
+
+```{r echo=TRUE, warning=FALSE, message=FALSE}
+
+nyc_blt_b <- ny %>%
+  filter(YearBuilt >= 1850, YearBuilt < 2018) %>% 
+  select(YearBuilt, BBL, NumFloors) %>%
+  mutate(DecadeBuilt = ceiling(YearBuilt/10)*10) %>% 
+  group_by(DecadeBuilt) %>% 
+  summarize(Lots_Built =sum(!is.na(BBL)))
+
+head(nyc_blt_b)
+
+p <- ggplot(nyc_blt_b, aes(x=DecadeBuilt, y=Lots_Built)) +
+     geom_bar(stat="identity", fill="grey") +
+     scale_x_continuous(breaks = seq(min(1800), max(2020), by = 20))
+
+
+p <- ggplotly(p)
+  
+p
+
+  
+```
+
+
+## Question
+
+After a few building collapses, the City of New York is going to begin investigating older buildings for safety. The city is particularly worried about buildings that were unusually tall when they were built, since best-practices for safety hadn't yet been determined. Create a graph that shows how many buildings of a certain number of floors were built in each year (note: you may want to use a log scale for the number of buildings). Find a strategy to bin buildings (It should be clear 20-29-story buildings, 30-39-story buildings, and 40-49-story buildings were first built in large numbers, but does it make sense to continue in this way as you get taller?)
+
+```{r echo=TRUE, warning=FALSE, message=FALSE}
+
+nyc_flrs <- ny %>%
+  filter(YearBuilt >= 1850, YearBuilt < 2018) %>% 
+  select(YearBuilt, BBL, NumFloors) %>%
+  mutate(NumFloors= round(NumFloors,-1)) %>% 
+  group_by(YearBuilt, NumFloors) %>% 
+  count() %>% 
+  filter(NumFloors >=20, NumFloors <= 70) %>% 
+  group_by(YearBuilt, NumFloors) %>%
+  summarise(floor_count = sum(n))
+
+  
+p <- ggplot(nyc_flrs, aes(YearBuilt,floor_count)) + geom_point(position='jitter') + 
+  theme_bw() + scale_y_continuous(trans='log10') + 
+  scale_x_continuous(breaks = seq(1850,2020, 30)) + 
+  labs(x = 'year', title = 'NYC Building Per Year by By Floor Count (1850 -2017)') + 
+  facet_wrap( ~ NumFloors)
+
+p <- ggplotly(p)
+  
+p
+
+  
+```
+
+
+## Question
+
+You work for a real estate developer and are researching underbuilt areas of the city. After looking in the Pluto data dictionary, you've discovered that all tax assessments consist of two parts: The assessment of the land and assessment of the structure. You reason that there should be a correlation between these two values: more valuable land will have more valuable structures on them (more valuable in this case refers not just to a mansion vs a bungalow, but an apartment tower vs a single family home). Deviations from the norm could represent underbuilt or overbuilt areas of the city. You also recently read a really cool blog post about bivariate choropleth maps, and think the technique could be used for this problem.
+Datashader is really cool, but it's not that great at labeling your visualization. Don't worry about providing a legend, but provide a quick explanation as to which areas of the city are overbuilt, which areas are underbuilt, and which areas are built in a way that's properly correlated with their land 
+
+
+```{r echo=TRUE, warning=FALSE, message=FALSE}
+
+ny_tax <- ny %>% 
+  select(AssessTot, AssessLand,  ZipCode) %>% 
+  mutate(AssessBldg = AssessTot - AssessLand) %>% 
+  mutate(zipStr = toString(ZipCode)) %>% 
+  group_by(ZipCode) %>% 
+  summarise(sum(AssessTot), sum(AssessLand), sum(AssessBldg)) %>% 
+  mutate(BldgtoLand = `sum(AssessBldg)`/`sum(AssessLand)`) %>% 
+  mutate(rank = rank(`sum(AssessLand)`)) %>% 
+  arrange(rank) %>% 
+  filter(rank <= 10)
+
+p <- ggplot(ny_tax, aes(x=ZipCode, y=rank)) +
+  geom_tile(aes(fill=BldgtoLand)) +
+  scale_x_continuous(breaks = seq(min(10000), max(12000), by = 200)) +
+  scale_y_continuous(breaks = seq(min(1), max(10), by = 1)) 
+ 
+
+p <- ggplotly(p)
+  
+p
+  
+
+
+```
+
