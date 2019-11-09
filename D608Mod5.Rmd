@@ -1,0 +1,30 @@
+---
+title: "DATA 608 - Module 5"
+author: "Jim Mundy"
+output:
+  html_document:
+    css:
+    highlight: pygments
+    theme: cerulean
+    toc: false
+    toc_float: false
+  pdf_document: default
+---
+## Approach
+#### My approach for this module follows:
+
+* Utilized Brackets to create html file (with Javascript) that met the assignment requirements
+* Utilized Shiny HTMLTemplate functionality to render the HTML page
+* Utilized Rpubs to deploy 
+
+
+
+
+
+```{r echo=FALSE}
+library(shiny)
+ui <- htmlTemplate("template.html")
+shinyUI(ui)
+```
+
+
