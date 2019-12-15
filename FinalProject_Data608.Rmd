@@ -401,7 +401,7 @@ getft <- function(x){
 }
 
 
-files <- dir("C:/Users/mutue/OneDrive/Documents/TimeForm/Data/TCharts/", full.names = T) 
+files <- dir("https://raw.githubusercontent.com/MundyMSDS/DATA608/master/", full.names = T) 
 
 tcharts <- files %>%
   map(read_csv, col_names=c("trk","rnum","rprse","rdt","rdst","srf","pos","sxtnth","pgm","hrse","stime","sdst","srail","samph","sahd","ctime","cpk","cdst","cdlt","camph")) %>%     
