@@ -1,0 +1,548 @@
+---
+title: "Data 608 Final Project"
+author: "Jim Mundy"
+output:
+  html_document:
+    css: final.css
+    code_folding: "hide"
+    highlight: pygments
+    theme: cerulean
+    toc: false
+    toc_float: false
+  pdf_document: default
+---
+
+<hr class="my-4">
+
+# {.tabset .tabset-fade}
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rpivotTable)
+library(shiny)
+library(plotly)
+library(ggvis)
+library(dplyr)
+library(tidyverse)
+library(DT)
+library(ggthemes)
+library(lubridate)
+library(devtools)
+library(ggConvexHull)
+library(grid)
+library(formattable)
+library(kableExtra)
+library(lubridate)
+
+pgm1 <- "#ec2c28"
+pgm2 <- "#FFFFFF"
+pgm3 <- "#1d4fa3"
+pgm4 <- "#EAE824"
+pgm5 <- "#458544"
+pgm6 <- "#060103"
+pgm7 <- "#EFA428"
+pgm8 <- "#f9bcc5"
+pgm9 <- "#1FB8D7"
+pgm10 <- "#9A4687"
+pgm11 <- "#C2C2C2"
+pgm12 <- "#a9d5b5"
+pgmwhite <- "#FFFFFF"
+pgmblack <- "000000"
+pgmyellow <-"#EAE824"
+pgmpink <- "#f9bcc5"
+
+barblue <- "#1893e9"
+bshadelow <- "#FBFDFE"
+bshadeHi <- "#008FD5"
+gshadelow <- "#F0F0F0"
+gshadehi <- "#CDCDCD"
+
+pgmcolorb <- function(n) {
+  case_when(
+  n == 1 ~ pgm1,
+  n == 2 ~ pgm2,
+  n == 3 ~ pgm3,
+  n == 4 ~ pgm4,
+  n == 5 ~ pgm5,
+  n == 6 ~ pgm6,
+  n == 7 ~ pgm7,
+  n == 8 ~ pgm8,
+  n == 9 ~ pgm9,
+  n == 10 ~ pgm10,
+  n == 11 ~ pgm11,
+  n == 12 ~ pgm12,
+  n > 12 ~ pgmwhite
+  )
+}
+
+pgmcolor <- function(n) {
+  case_when(
+  n == 2 ~ rgb(0,0,0),
+  #n == 3 ~ "white",
+  #n == 4 ~ "black",
+  #n == 5 ~ "white",
+  #n == 6 ~ "yellow",
+  #n == 7 ~ "black",
+  #n == 8 ~ "black",
+  #n == 9 ~ "black",
+  #n == 10 ~ "black",
+  #n == 11 ~ "black",
+  #n == 12 ~ "black",
+  #n > 12 ~ "black",
+  TRUE ~ rgb(255,255,255, max=255)
+  )
+}
+
+
+pgm8 <- "#1d4fa3"
+
+
+```
+
+```{r formatters, include=FALSE}
+
+dr_formatter <- function (color = "lightgray", fun = "proportion", ...)
+{
+  fun <- match.fun(fun)
+  formatter("span", 
+            style = function(x) style(
+              font.weight = "bold",
+              align = "left",
+              color = "black"))
+}
+
+color_bar2 <- function (color = "lightgray", fun = "proportion", ...) 
+{
+  fun <- match.fun(fun)
+  formatter(
+    "span", 
+    style = function(x) style(
+      display = "inline-block",
+      `font.weight` = "bold",
+      align = "right",
+      direction = "rtl", `border-radius` = "0px", `padding-right` = "2px", 
+     `background-color` = csscolor(color), color = csscolor(barblue),
+      width = percent(fun(as.numeric(x), ...))))
+}
+
+pgm_formatter <- function (color = "lightgray", fun = "proportion", ...)
+{
+  fun <- match.fun(fun)
+  formatter("span", 
+            style = function(x) style(
+              font.weight = "bold",
+              align = "left",
+              `background-color`=csscolor(map(pgm,pgmcolorb))),
+              color = csscolor(map(pgm,pgmcolor)))
+}
+
+
+
+
+```
+
+## Final Project 
+<div class="jumbotron">
+  </br>
+  <h3 class="display-3">HandicappR</h3>
+  <p class="lead">A Tool Horsplayers Who Want To Win Big</p>
+  <hr class="my-4">
+  <p>Author: James Mundy</p>
+  <p>Date: December 15, 2019 </p>
+  </br>
+  </br>
+  <h3 class="display-3">Product Overview</h3>
+  
+  <p>In horse racing, the winner is not always the fastest horse. Ground loss and race shape are other key race outcome determinants.  HandicappR provides horseplayers new insight into ground loss and race shape. This easy to use tool is sure to make you a winner.</p>    
+ </br>
+<p>Key Handicapprfeatures include:</p>
+<ul>
+<li style="font-size:17px;">Automated Screen Scraper Script</li>
+<li style="font-size:17px;">Easy File Loading With Purrr and Map</li>
+<li style="font-size:17px;">New Shiny Functionality</li>
+<li style="font-size:17px;">HTML Widgets For Interacting With Your Race Telemetry Data</li>
+<li style="font-size:17px;">Stunning Formattable Tables</li>
+<li style="font-size:17px;">Innovative Convex Hull Race Shape Plots</li>
+<li style="font-size:17px;">See Where Each Horse Is For Each Sixteenth of a Mile</li>
+</ul>
+  </br>
+  </br>
+  </br>
+  </br>
+  </br>
+  </br>
+  </br>
+  </br>
+  </br>
+  </br>
+  </br>
+  </br>
+  </br>
+  </br>
+  </br>
+  </br>
+  </br>
+   </br>
+  </br>
+  </br>
+  </br>
+  </br>
+</div>
+
+
+
+## Data 
+
+<div class="jumbotron">
+  <h3 class="display-3">Getting The DATA</h3>
+  <hr class="my-4">
+  <p style="font-size:17px;">Handicappr sources it data via a custom screen scraping scruot.  Data files are loaded with the help of Purrr. This makes for a streamlined data gathering process.  
+</div>
+<br/>
+
+### Screen Sraped Data
+<hr class="my-4">
+<p style="font-size:17px;"> The screen scraping script logs into the trakus website and scrapes the race data specified in the script. The image below provides and example of the data that is scraped.</p>
+
+Trakus Website: https://tnetwork.trakus.com/tnet/Login.aspx
+
+
+### Screen Sraper Script
+
+```{r eval=FALSE}
+library(rjson)
+library(httr)
+library(XML)
+library(stringr)
+library(lubridate)
+library(tidyverse)
+
+# This script scrape data from Trakus T-Charts
+
+#Login
+login <- function(){
+  r <- POST("http://tnetwork.trakus.com/tnet/Login.aspx", body = list(TEXT_Username="JamesMundy",TEXT_Password="xxx",BUTTON_Submit="Log+In"))
+  a<-cookies(r)
+  ASP.NET_SessionID <-a[7][[1]][1]
+  userCredentials <-a[7][[1]][2]
+  ASPAUTH <-a[7][[1]][3]
+}
+
+#Convert Fraction to doubles
+mixedToFloat <- function(x){
+  is.integer  <- grepl("^\\d+$", x)
+  is.fraction <- grepl("^\\d+\\/\\d+$", x)
+  is.mixed    <- grepl("^\\d+ \\d+\\/\\d+$", x)
+  #stopifnot(all(is.integer | is.fraction | is.mixed))
+  
+  numbers <- strsplit(x, "[ /]")
+  
+  ifelse(is.integer,  as.numeric(sapply(numbers, `[`, 1)),
+         ifelse(is.fraction, as.numeric(sapply(numbers, `[`, 1)) /
+                  as.numeric(sapply(numbers, `[`, 2)),
+                as.numeric(sapply(numbers, `[`, 1)) +
+                  as.numeric(sapply(numbers, `[`, 2)) /
+                  as.numeric(sapply(numbers, `[`, 3))))
+}
+
+getLengths <- function(x){
+  case_when(
+    x == "Neck" ~ 0.25,
+    x == "Head" ~ 0.1,
+    x == "Nose" ~ 0.05,
+    nchar(x) > 0 ~ mixedToFloat(x),
+    TRUE ~ 0
+  )
+  
+}
+
+
+
+#Match Abbreviation with VenueID
+start <- function(data,race_date)
+{
+  trk <- str_to_lower(data)
+  d <- mdy(race_date)
+  filedate <- str_replace_all(toString(d),"-","")
+  filename <- str_c(data,filedate,".csv", sep = '')
+  
+  
+  setwd(file.path("C:","Users", "mutue", "OneDrive", "Documents", "TimeForm", "Data", "TCharts"))
+  l <- list(CD = 18,BEL = 23,DM = 10,GP = 20,TAM = 21,AQU = 24,SA = 4,SAR = 25,KEE = 7)
+  cat(l[[data]],race_date)
+  login()
+  race_program(l[[data]],race_date,filename)
+}
+
+#Go to specific date and track
+race_program <- function(V_ID,race_date,filename){
+  
+  tchartConn <<-file(filename,"w")
+  
+  url <-paste(c('http://tnetwork.trakus.com/tnet/t_RaceDay.aspx?VenueID=',toString(V_ID),'&Type=TBRED&Date=',toString(race_date)),collapse='')
+  r <- GET(url)
+  temp<-content(r, "text")
+  doc <- htmlParse(temp)
+  #Grab all event id
+  temp_event_id_list<-xpathSApply(doc,"//a[contains(@href,'t_Recap.aspx?EventID=')]/@href")
+  temp_event_id_list<-substr(temp_event_id_list,22,40)
+  event_id_list <- list()
+  counter<-1
+  #Scrape through each event
+  for( i in temp_event_id_list)
+  {
+    event_id_list[counter]<-i
+    counter<-counter+1
+    race_detail(i, tchartConn)
+  }
+  close(tchartConn, type ='w')
+  
+}
+
+#Scrape Race in every range
+race_detail <- function(event_id, f){
+  
+  url <- paste(c('http://tnetwork.trakus.com/tnet/t_Recap.aspx?EventID=',toString(event_id),'&PostSelect=0'),collapse='')
+  r <- GET(url)
+  temp<-content(r, "text")
+  doc <- htmlParse(temp)
+  race_info<-xpathSApply(doc,"//*[@class=\"recapTextHeader\"]/td/div")[[1]]
+  race_info<-toString(xmlValue(race_info))
+  #race_info<-paste(c(toString(xmlValue(race_info[1]$text)),toString(xmlValue(race_info[3]$i)),toString(xmlValue(race_info[5]$text)),toString(xmlValue(race_info[7]$text)),toString(xmlValue(race_info[9]$text))),collapse='|')
+  race_info <- str_replace_all(race_info,"(<).*?(>)","") 
+  race_info <- str_replace_all(race_info, "(\\s{3,200})"," ")
+
+  
+  track_name <- str_extract(race_info,'.+?(?=\\sRace)')
+  race_number <- str_extract(race_info,'(Race\\s\\d+)')
+  purse <- str_replace(str_extract(race_info, "(\\$\\d+)"),"(\\$)","")
+  race_date <- str_extract(race_info, "([A-Z][a-z]+\\s\\d+\\,\\s\\d{4})")
+  race_date <- mdy(race_date)
+  race_date <- toString(race_date)
+  distance <- str_extract(race_info,'(\\d\\sFurlongs|\\d\\.\\d Furlongs|\\d\\s+\\d\\/\\d{1,2}\\sMiles)')
+  surface <- str_extract(race_info,'(Dirt|Turf|Sythetic|Outer Turf|Inner Turf)')
+  
+  final_select<-length(xpathSApply(doc,"//*[@id=\"PostSelect\"]/option"))
+  print(final_select)
+  #Loop through each segment
+  for(range_select in 2:final_select)
+  {
+    url <- paste(c('http://tnetwork.trakus.com/tnet/t_Recap.aspx?EventID=',toString(event_id),'&PostSelect=',toString(range_select)),collapse='')
+    print(url)
+    r <- GET(url)
+    temp<-content(r, "text")
+    doc <- htmlParse(temp)
+    
+    horse_num  <- x <-xpathSApply(doc,"//tr[@bgcolor=\"white\"]/td[2]/img",xmlAttrs)
+    horse_num <- horse_num[3,]
+    horse_num <- str_sub(horse_num,-6,-4)
+    horse_num <- str_extract(horse_num,'[0-9ABC]{1,2}')
+    
+    
+    
+    horse_name <- x <-xpathSApply(doc,"//tr[@bgcolor=\"white\"]/td[3]",xmlValue)
+    horse_time <- x <-xpathSApply(doc,"//tr[@bgcolor=\"white\"]/td[4]",xmlValue)
+    horse_dist <-xpathSApply(doc,"//tr[@bgcolor=\"white\"]/td[5]",xmlValue)
+    horse_rail <-xpathSApply(doc,"//tr[@bgcolor=\"white\"]/td[6]",xmlValue)
+    horse_avg <-xpathSApply(doc,"//tr[@bgcolor=\"white\"]/td[7]",xmlValue)
+    horse_ahead <-xpathSApply(doc,"//tr[@bgcolor=\"white\"]/td[8]",xmlValue)
+    horse_ahead <- str_replace(horse_ahead,'(\\dP\\d:)',"")
+    horse_ahead <- str_replace(horse_ahead,'(\\()',"")
+    horse_ahead <- str_replace(horse_ahead,'(\\))',"")
+    horse_ahead <- getLengths(horse_ahead)
+    ifelse(horse_ahead == "","0",horse_ahead)
+    
+    
+    
+    horse_cu_time <-xpathSApply(doc,"//tr[@bgcolor=\"white\"]/td[11]",xmlValue)
+    horse_cu_peak <-xpathSApply(doc,"//tr[@bgcolor=\"white\"]/td[12]",xmlValue)
+    horse_cu_dist <-xpathSApply(doc,"//tr[@bgcolor=\"white\"]/td[13]",xmlValue)
+    horse_cu_delta <-xpathSApply(doc,"//tr[@bgcolor=\"white\"]/td[14]",xmlValue)
+    horse_cu_delta <- str_replace_all(horse_cu_delta,'---','0')
+    horse_cu_avg <-xpathSApply(doc,"//tr[@bgcolor=\"white\"]/td[15]",xmlValue)
+    
+    for(count in 1:length(horse_name))
+    {
+      
+      
+      cat(track_name, race_number, purse, race_date, distance, surface, count, range_select, horse_num[count], horse_name[count], horse_time[count],horse_dist[count],horse_rail[count],horse_avg[count],horse_ahead[count],horse_cu_time[count],horse_cu_peak[count],horse_cu_dist[count],horse_cu_delta[count],horse_cu_avg[count],'\n')
+      writeLines(paste(c(track_name, race_number, purse, race_date, distance, surface, count, range_select, horse_num[count], horse_name[count], horse_time[count],horse_dist[count],horse_rail[count],horse_avg[count],horse_ahead[count],horse_cu_time[count],horse_cu_peak[count],horse_cu_dist[count],horse_cu_delta[count],horse_cu_avg[count]),collapse = ','), f)
+  
+    }
+  }
+}
+
+
+start("AQU","12/8/2019")
+
+```
+
+<hr class="my-4">
+<br/><br/>
+
+
+### Load Data
+
+<hr class="my-4">
+<p style="font-size:17px;"> Map and read_csv functions are used in conjunction to load all the csv files in the data folder. Files are then reduced with rbind into a single data frame - tcharts.</p>
+
+```{r echo=TRUE, warning=FALSE, message=FALSE}
+getSecs <- function(t) {
+  a <- as.numeric(str_extract(t,"^(\\d)"))* 60
+  b <- as.numeric(str_extract(str_trim(t),"(.){5}$"))* 1
+  getSecs <- a + b
+}
+
+getft <- function(x){
+ x * 330
+}
+
+
+
+
+tcharts <- read_csv("AQU20191101.csv",col_names=c("trk","rnum","rprse","rdt","rdst","srf","pos","sxtnth","pgm","hrse","stime","sdst","srail","samph","sahd","ctime","cpk","cdst","cdlt","camph")) 
+
+
+tcharts <- tcharts %>% 
+  mutate(rnum = as.double(str_extract(rnum, "(\\d+)"))) %>% 
+  mutate(rprse = as.double(str_extract(rprse, "(\\d+)"))) %>% 
+  mutate(sxtnth = as.numeric(sxtnth)-1) %>% 
+  mutate(grdlss = (as.numeric(cdst)- (sxtnth * 330))) %>% 
+  mutate(sfps = as.numeric(sdst) / as.numeric(stime)) %>%
+  mutate(sahd = if_else(is.na(sahd),0,as.double(sahd))) %>% 
+  mutate(ctime = if_else(nchar(ctime)>6,(((period_to_seconds(hms(ctime))-3000)/100)*10), as.numeric(ctime))) %>%
+  #mutate(ctime = period_to_seconds(hms(ctime))) %>%
+  mutate(sxtnth = getft(sxtnth)) %>%  
+  mutate(cfps = as.numeric(cdst) / as.numeric(ctime)) %>%
+  group_by(sxtnth) %>% 
+  mutate(beatenLengths = cumsum(sahd) - sahd) %>% 
+  mutate(beatenLengths =  - beatenLengths * 9) %>%
+  ungroup() %>% 
+  mutate(Finish = pos) %>% 
+  mutate(srail = -as.numeric(srail)) %>% 
+  rename(Horse=hrse, DistanceRun = cdst, Sixteenth = sxtnth, GroundLoss = grdlss, OffRail = srail, FPS=cfps, BL=beatenLengths, Time=ctime, LengthsAhead=sahd) %>% 
+  select(pgm, Horse, GroundLoss, DistanceRun, pos, OffRail, LengthsAhead, BL, Sixteenth, Finish, rnum, rdt, trk, FPS, Time, sdst)
+
+```
+<hr class="my-4">
+<br/><br/>
+
+## HandicappR
+
+<div class="jumbotron">
+  <h3 class="display-3">HandicappR Instruction</h3>
+  <hr class="my-4">
+  <p style="font-size:17px;">Using HandicappR is easy, just follow these 3 simple instructions:</p>
+  
+ <ul>
+  <li style="font-size:17px;">Select a Race Number</li> 
+  <li style="font-size:17px;">Use the slider to view your desired Point of Call</li>
+  <li style="font-size:17px;">See Race Shape, Ground Loss and Much More For Horse At Each Point Of Call</li>
+</ul>
+<hr class="my-4">
+</br>
+
+<p style="font-size:17px;">To access the app on shinyapps.io please click the link below:</p>
+
+
+https://mundymsds.shinyapps.io/FinalProject_Data608/
+
+
+
+<p style="font-size:17px;">Here is a screen shot of the App:</p>
+
+
+![alt text](app.png)
+
+
+
+## Shiny Code
+
+
+<div class="jumbotron">
+  <h3 class="display-3">Shiny Code</h3>
+  <hr class="my-4">
+  <p style="font-size:17px;">The Shiny Code for the App can be viewed by clicking the Code Button.</p>
+  
+ 
+<hr class="my-4">
+</br>
+```{r  echo = TRUE, eval=FALSE}
+maxrng <- 5280
+
+inputPanel(
+  selectInput("rnum", label = "Race Number:",
+              choices = c(1,2,3,4,5,6,7,8,9), selected = 1),
+  
+  sliderInput("poc", label = "Point of Call:",
+              min = 330, max = maxrng, value = 330, step = 330)
+)
+
+
+cdat <- reactive({
+    tcharts %>% filter(rnum %in% input$rnum) %>%
+    filter(Sixteenth %in% input$poc)
+})
+
+
+cdat2 <- reactive({
+    tcharts %>% filter(rnum %in% input$rnum) %>%
+    filter(Sixteenth %in% input$poc) %>%
+    mutate(FPS=round(FPS/10,2)) %>% 
+    select(pgm, Horse, GroundLoss, DistanceRun, Time, FPS, pos, LengthsAhead)
+})
+
+
+cdat3 <- reactive({
+    tcharts 
+})
+
+
+
+# Render Plot 1
+
+renderPlot({
+  
+  ggplot(cdat(), aes(x = BL,y = OffRail)) +
+  geom_point() + 
+  geom_label(aes(label=pgm, fill= as.factor(pgm), color= as.factor(pgm)),  size = 3.0) +
+  geom_convexhull(alpha = 0.2, fill = "blue") +
+  scale_fill_manual(values = c("#ec2c28","#FFFFFF","#1d4fa3","#EAE824","#458544","#060103","#EFA428","#f9bcc5", "#1FB8D7","#9A4687","#C2C2C2","#a9d5b5")) +
+  scale_color_manual(values = c("#FFFFFF", "#000000", "#FFFFFF", "#000000", "#FFFFFF", "#EAE824", "#000000", "#000000","#000000","#FFFFFF","#000000","#000000")) +
+  #facet_wrap(~ Sixteenth, ncol=4) +
+  theme_fivethirtyeight() +
+  theme(legend.position = "none") 
+  
+
+})
+
+
+renderFormattable({
+  formattable(cdat2(),align =c("c","l","l","c","l","c","r"),list(
+  pgm = dr_formatter("black"),
+  Horse =dr_formatter("black"),
+  GroundLoss = color_bar2(gshadehi),
+  DistanceRun = dr_formatter("black"),
+  Time = dr_formatter("black"),
+  FPS = color_tile(bshadelow, bshadeHi),
+  pos = dr_formatter("black"),
+  LengthsAhead = dr_formatter("black")
+  ))
+  
+})
+```
+  </br>
+  <h3 class="display-3">Legend</h4>
+  <hr class="my-4">
+ <ul>
+  <li style="font-size:17px;">pgm - Program Number</li> 
+  <li style="font-size:17px;">Horse - Names of Race Entrant</li>
+  <li style="font-size:17px;">Ground Loss - Incremental Feet Run Over The Minimum Required</li>
+  <li style="font-size:17px;">Distance Run - Total Distance Run At Particular Point In Race</li>
+  <li style="font-size:17px;">Time - A Runners Time In Seconds</li>
+  <li style="font-size:17px;">FPS - Feet Per Second Measure Distance Traveled Per Second (Velocity)</li>
+  <li style="font-size:17px;">pos - Position At A Particular Point of Call</li>
+  <li style="font-size:17px;">Lengths Ahead - Length Ahead of The Horse Behind One Position Back</li>
+</ul>
